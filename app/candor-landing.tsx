@@ -210,14 +210,14 @@ const NUMBERS: NumberItem[] = [
     body: "Every dollar of new ARR — what did it cost you? Below 1x is exceptional. Above 2x is a problem. Most founders have never calculated this correctly. This number makes the cost of growth impossible to ignore.",
   },
   {
-    n: "04", name: "Core Action Conversion", abbr: "CAC", color: T.red,
-    verdict: "The percentage of new customers who actually reach value.",
-    body: "Most customers churn because they never experienced the core benefit. This metric exposes whether onboarding actually works — not whether you're acquiring users.",
+    n: "04", name: "Runway", abbr: "RWY", color: T.red,
+    verdict: "How many decisions you can afford to get wrong.",
+    body: "Not cash balance. Not burn rate alone. Actual months of optionality remaining at current trajectory. This reframes every decision: the question is never just 'should we do this' — it's 'can we afford to be wrong about this'.",
   },
   {
-    n: "05", name: "Forward Signal", abbr: "FWD", color: T.amber,
-    verdict: "The earliest warning that revenue is about to feel pain.",
-    body: "Revenue doesn't drop suddenly. It disappears slowly, starting with invisible damage upstream. This catches the warning signs weeks before they show up in your numbers.",
+    n: "05", name: "Activation → Value Rate", abbr: "AVR", color: T.amber,
+    verdict: "The earliest warning sign of future churn.",
+    body: "The percentage of new users reaching the moment your product becomes worth keeping. Most churn doesn't start at renewal. It starts here — silently, weeks or months before you notice. This is the canary in the coal mine.",
   },
 ];
 
