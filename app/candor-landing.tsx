@@ -253,7 +253,7 @@ const TRUST: string[] = [
 
 // ─── HOOKS ───────────────────────────────────────────────────────
 function useInView(threshold: number = 0.12): InViewHookReturn {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null) as RefObject<HTMLDivElement>;
   const [visible, setVisible] = useState<boolean>(false);
   useEffect(() => {
     const obs = new IntersectionObserver(
