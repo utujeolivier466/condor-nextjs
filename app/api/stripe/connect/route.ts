@@ -20,7 +20,7 @@ export async function POST() {
   const params = new URLSearchParams({
     response_type:   "code",
     client_id:       clientId,
-    scope:           "read_only",       // READ-ONLY. No charge permissions. Ever.
+    scope:           "read_write",      // Required by Stripe for Connect OAuth
     redirect_uri:    redirectUri,
     // Optional: pre-fill the Stripe Connect form
     // "stripe_user[business_type]": "company",
