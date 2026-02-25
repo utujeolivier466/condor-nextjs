@@ -77,8 +77,9 @@ export default function BurnInputPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ monthly_burn: value }),
       });
-      if (!res.ok) throw new Error("Failed to save.");
-      // TODO: Create dashboard page - redirecting to home for now
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to save.");
+      // Redirect to home/dashboard after saving
       router.push("/");
     } catch (err: any) {
       setError(err.message);
