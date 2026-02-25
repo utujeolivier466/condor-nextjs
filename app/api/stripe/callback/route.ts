@@ -7,9 +7,18 @@ import { supabase } from "@/lib/supabase";
 // Called by Stripe after the founder authorizes.
 // Exchanges code → stripe_account_id, saves to DB, redirects to /snapshot.
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover" as any,
-});
+let stripe: Stripe;
+try {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error("[Stripe callback] STRIPE_SECRET_KEY not configured");
+  } else {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2026-01-28.clover" as any,
+    });
+  }
+} catch (e) {
+  console.error("[Stripe callback] Failed to initialize Stripe:", e);
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,6 +34,13 @@ export async function GET(req: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(new URL("/connect-stripe?error=missing_code", req.url));
+  }
+
+  // ── Check Stripe is configured ─────────────────────────────────
+  if (!stripe) {
+    return NextResponse.redirect(
+      new URL(`/connect-stripe?error=${encodeURIComponent("Stripe is not configured. Please contact support.")}`, req.url)
+    );
   }
 
   try {
@@ -48,10 +64,18 @@ export async function GET(req: NextRequest) {
         connected_at:      new Date().toISOString(),
       }, { onConflict: "company_id" });
 
-    if (dbError) throw new Error("DB error: " + dbError.message);
+    if (dbError) {
+      console.error("[Stripe callback] DB Error:", dbError.message);
+      // If it's a table not found error, redirect with helpful message
+      if (dbError.message.includes("relation") || dbError.message.includes("table")) {
+        return NextResponse.redirect(
+          new URL(`/connect-stripe?error=${encodeURIComponent("Database not set up. Please run the schema.sql in Supabase.")}`, req.url)
+        );
+      }
+      throw new Error("DB error: " + dbError.message);
+    }
 
     // ── Redirect immediately to /snapshot ───────────────────────
-    // No welcome screen. No "thanks for connecting." Instant value.
     const res = NextResponse.redirect(new URL("/snapshot", req.url));
 
     // Store company_id in cookie so /snapshot can identify the user
