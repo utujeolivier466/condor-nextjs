@@ -102,7 +102,7 @@ export default function SnapshotPage() {
       setCountdown(c => {
         if (c <= 1) {
           clearInterval(interval);
-          router.push("/burn-input");
+          router.push("/");
           return 0;
         }
         return c - 1;
@@ -273,7 +273,7 @@ export default function SnapshotPage() {
 
         {/* Continue button + countdown */}
         <div className="fu" style={{ animationDelay: "0.6s", display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
-          <button className="continue-btn" onClick={() => router.push("/burn-input")}>
+          <button className="continue-btn" onClick={() => router.push("/")}>
             Continue →
           </button>
           <p style={{

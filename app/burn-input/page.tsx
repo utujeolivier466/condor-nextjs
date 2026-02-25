@@ -78,7 +78,8 @@ export default function BurnInputPage() {
         body: JSON.stringify({ monthly_burn: value }),
       });
       if (!res.ok) throw new Error("Failed to save.");
-      router.push("/dashboard");
+      // TODO: Create dashboard page - redirecting to home for now
+      router.push("/");
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
