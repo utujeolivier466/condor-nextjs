@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { supabase } from "@/lib/supabase";
 
 // ─── Stripe OAuth callback ────────────────────────────────────────
 // GET /api/stripe/callback?code=xxx
@@ -36,20 +37,25 @@ export async function GET(req: NextRequest) {
     const stripeAccountId = response.stripe_user_id;
     if (!stripeAccountId) throw new Error("No Stripe account ID returned.");
 
-    // ── Save to DB ───────────────────────────────────────────────
-    // Only the three fields that matter. Nothing else.
-    await saveConnection({
-      company_id:        generateCompanyId(),   // replace with your auth session ID
-      stripe_account_id: stripeAccountId,
-      connected_at:      new Date().toISOString(),
-    });
+    const companyId = stripeAccountId; // Use Stripe account ID as company ID
+
+    // ── Save to Supabase ─────────────────────────────────────────
+    const { error: dbError } = await supabase
+      .from("stripe_connections")
+      .upsert({
+        company_id:        companyId,
+        stripe_account_id: stripeAccountId,
+        connected_at:      new Date().toISOString(),
+      }, { onConflict: "company_id" });
+
+    if (dbError) throw new Error("DB error: " + dbError.message);
 
     // ── Redirect immediately to /snapshot ───────────────────────
     // No welcome screen. No "thanks for connecting." Instant value.
     const res = NextResponse.redirect(new URL("/snapshot", req.url));
 
     // Store company_id in cookie so /snapshot can identify the user
-    res.cookies.set("candor_company_id", stripeAccountId, {
+    res.cookies.set("candor_company_id", companyId, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -62,41 +68,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error("[Stripe callback error]", err.message);
     return NextResponse.redirect(
-      new URL(`/connect-stripe?error=${encodeURIComponent("Connection failed. Try again.")}`, req.url)
+      new URL(`/connect-stripe?error=${encodeURIComponent("Connection failed: " + err.message)}`, req.url)
     );
   }
-}
-
-// ─── DB: Save Stripe connection ───────────────────────────────────
-// Replace this with your actual DB client (Prisma, Supabase, Drizzle, etc.)
-async function saveConnection({
-  company_id,
-  stripe_account_id,
-  connected_at,
-}: {
-  company_id: string;
-  stripe_account_id: string;
-  connected_at: string;
-}) {
-  // ── Prisma example ──
-  // await prisma.stripeConnection.upsert({
-  //   where:  { company_id },
-  //   update: { stripe_account_id, connected_at },
-  //   create: { company_id, stripe_account_id, connected_at },
-  // });
-
-  // ── Supabase example ──
-  // const { error } = await supabase
-  //   .from("stripe_connections")
-  //   .upsert({ company_id, stripe_account_id, connected_at });
-  // if (error) throw error;
-
-  // ── Raw log for now (replace before shipping) ──
-  console.log("[Stripe connected]", { company_id, stripe_account_id, connected_at });
-}
-
-// ─── Temporary: generate company ID ──────────────────────────────
-// Replace with your actual auth session lookup.
-function generateCompanyId(): string {
-  return `company_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
