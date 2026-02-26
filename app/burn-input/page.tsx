@@ -79,8 +79,8 @@ export default function BurnInputPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to save.");
-      // Redirect to home after saving
-      router.push("/home");
+      // Redirect to email preview after saving
+      router.push("/email-preview");
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
