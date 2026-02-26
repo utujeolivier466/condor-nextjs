@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-// ─── POST /api/setup/email ────────────────────────────────────────
+// ─── POST /api/setup/email ───────────────────────────────────────
 // Saves founder's email to stripe_connections.
 // Called once after Stripe connects, before /snapshot.
 

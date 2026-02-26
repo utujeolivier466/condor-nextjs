@@ -1,8 +1,8 @@
 import { supabase } from "./supabase";
-import { computeMetrics } from "./compute";
-import { generateJudgment, computeHealthScore } from "./judgment";
-import { buildEmail } from "./email-template";
-import { sendEmail } from "./send-email";
+import { computeMetrics } from "./lib-compute";
+import { generateJudgment, computeHealthScore } from "./lib-judgment";
+import { buildEmail } from "./lib-email-template";
+import { sendEmail } from "./lib-send-email";
 
 // ─── lib/weekly-job.ts ────────────────────────────────────────────
 // The product. Called by the cron endpoint every Sunday at 11pm.
@@ -116,9 +116,11 @@ export async function processCompany(companyId: string): Promise<JobResult> {
 
       // Update trial: increment count, set next Monday
       supabase.from("trials").update({
-        emails_sent:   supabase.rpc("increment", { row_id: companyId, amount: 1 }),
         next_email_at: getNextMonday(new Date()).toISOString(),
       }).eq("company_id", companyId),
+
+      // Increment emails_sent using the function
+      supabase.rpc("increment_emails_sent", { p_company_id: companyId }),
     ]);
 
     console.log(`[weekly-job] ✓ Sent to ${companyId} (${healthScore})`);

@@ -1,4 +1,4 @@
-import { Metrics } from "./compute";
+import { Metrics } from "./lib-compute";
 
 // ─── lib/judgment.ts ──────────────────────────────────────────────
 // Rule-based. Not AI. One sentence. No advice list.

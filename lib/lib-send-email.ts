@@ -1,4 +1,4 @@
-import { EmailContent } from "./email-template";
+import { EmailContent } from "./lib-email-template";
 
 // ─── lib/send-email.ts ────────────────────────────────────────────
 // Sends via Resend (recommended) or falls back to console log in dev.

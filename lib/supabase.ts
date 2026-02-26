@@ -26,6 +26,23 @@ export type StripeConnection = {
   email?:            string | null;
 };
 
+export type Trial = {
+  company_id:       string;
+  started_at?:      string;
+  next_email_at:    string;
+  status:           "active" | "paused" | "cancelled";
+  emails_sent:      number;
+};
+
+export type EmailSent = {
+  id?:              number;
+  company_id:       string;
+  sent_at?:         string;
+  subject?:         string;
+  constraint_text?: string | null;
+  health_score?:    "HEALTHY" | "FRAGILE" | "AT_RISK" | null;
+};
+
 export type Snapshot = {
   id?:               number;
   company_id:        string;

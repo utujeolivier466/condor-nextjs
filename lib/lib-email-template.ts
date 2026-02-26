@@ -1,4 +1,4 @@
-import { Metrics } from "./compute";
+import { Metrics } from "./lib-compute";
 
 // ─── lib/email-template.ts ────────────────────────────────────────
 // Plain text. No images. No branding. No HTML styling.
