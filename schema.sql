@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS stripe_connections (
   company_id        TEXT        PRIMARY KEY,
   stripe_account_id TEXT        NOT NULL UNIQUE,
   connected_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  monthly_burn      NUMERIC(12,2)         -- added: the one manual input
+  monthly_burn      NUMERIC(12,2),       -- the one manual input
+  email             TEXT                  -- founder's email for weekly brief
 );
 
 CREATE INDEX IF NOT EXISTS idx_stripe_connections_account

@@ -23,6 +23,7 @@ export type StripeConnection = {
   stripe_account_id: string;
   connected_at:      string;
   monthly_burn?:     number | null;
+  email?:            string | null;
 };
 
 export type Snapshot = {

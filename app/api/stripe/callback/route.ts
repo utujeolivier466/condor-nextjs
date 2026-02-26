@@ -75,8 +75,8 @@ export async function GET(req: NextRequest) {
       throw new Error("DB error: " + dbError.message);
     }
 
-    // ── Redirect immediately to /snapshot ───────────────────────
-    const res = NextResponse.redirect(new URL("/snapshot", req.url));
+    // ── Redirect to /setup to collect email ───────────────────────
+    const res = NextResponse.redirect(new URL("/setup", req.url));
 
     // Store company_id in cookie so /snapshot can identify the user
     res.cookies.set("candor_company_id", companyId, {
