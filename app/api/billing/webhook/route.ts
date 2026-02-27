@@ -126,6 +126,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
-// ── IMPORTANT: disable body parsing — Stripe needs raw body ───────
-export const config = { api: { bodyParser: false } };

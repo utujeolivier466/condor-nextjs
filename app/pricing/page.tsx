@@ -131,16 +131,24 @@ export default function PricingPage() {
 
         {/* Billing toggle */}
         <div className="fu" style={{ display: "flex", justifyContent: "center", gap: 0, marginBottom: 40, animationDelay: "0.1s" }}>
-          <button className={`toggle-btn${billing === "monthly" ? " active" : ""}`} onClick={() => setBilling("monthly")}>
+          <button
+            type="button"
+            className={`toggle-btn${billing === "monthly" ? " active" : ""}`}
+            onClick={(e) => { e.preventDefault(); setBilling("monthly"); }}
+          >
             Monthly
           </button>
-          <button className={`toggle-btn${billing === "annual" ? " active" : ""}`} onClick={() => setBilling("annual")}>
+          <button
+            type="button"
+            className={`toggle-btn${billing === "annual" ? " active" : ""}`}
+            onClick={(e) => { e.preventDefault(); setBilling("annual"); }}
+          >
             Annual
           </button>
         </div>
 
         {/* Price */}
-        <div className="fu" style={{ textAlign: "center", marginBottom: 48, animationDelay: "0.18s" }}>
+        <div key={billing} className="fu" style={{ textAlign: "center", marginBottom: 48, animationDelay: "0.18s" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 4 }}>
             <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 24, color: T.fog, marginTop: 12 }}>$</span>
             <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(72px, 14vw, 96px)", fontWeight: 300, color: T.bone, lineHeight: 1, letterSpacing: "-0.02em" }}>
