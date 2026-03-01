@@ -1,3 +1,5 @@
-import ConnectStripePage from "./connect-stripe-page";
+import { redirect } from "next/navigation";
 
-export default ConnectStripePage;
+export default function ConnectStripePage() {
+  redirect("/onboarding");
+}

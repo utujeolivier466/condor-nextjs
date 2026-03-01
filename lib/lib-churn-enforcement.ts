@@ -91,16 +91,17 @@ async function enforceNoBurnInput(results: ChurnResult[]) {
 
 // ─── Rule 3: 3 emails sent, none opened ──────────────────────────
 // Passive disengagement. They don't want it.
-// Note: requires email open tracking (add Resend webhook for opens)
-// For now: cancel after 3 emails sent with no /home visits
+// Warns on first detection, cancels if still silent after 7 days
 async function enforceEmailIgnored(results: ChurnResult[]) {
   const { data: trials } = await supabase
     .from("trials")
-    .select("company_id, emails_sent")
+    .select("company_id, emails_sent, last_warning_at")
     .eq("status", "active")
     .gte("emails_sent", 3);
 
   if (!trials) return;
+
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   for (const trial of trials) {
     // Check if they've visited /home recently (last_seen_at)
@@ -114,13 +115,31 @@ async function enforceEmailIgnored(results: ChurnResult[]) {
     const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
 
     if (!lastSeen || lastSeen < threeWeeksAgo) {
-      // Warn first — one more email then cancel
-      results.push({
-        company_id: trial.company_id,
-        reason: "3+ emails sent, no engagement",
-        action: "warned",
-      });
-      // TODO: send "last warning" email, then cancel next week if still silent
+      // Check if already warned
+      const lastWarningAt = trial.last_warning_at ? new Date(trial.last_warning_at) : null;
+
+      if (!lastWarningAt) {
+        // First time detecting disengagement — warn them
+        await supabase
+          .from("trials")
+          .update({ last_warning_at: new Date().toISOString() })
+          .eq("company_id", trial.company_id);
+
+        results.push({
+          company_id: trial.company_id,
+          reason: "3+ emails sent, no engagement - warned",
+          action: "warned",
+        });
+      } else if (lastWarningAt < oneWeekAgo) {
+        // Already warned and still silent after 7 days — cancel
+        await cancelTrial(trial.company_id, "3+ emails sent, ignored warnings for 7+ days");
+        results.push({
+          company_id: trial.company_id,
+          reason: "3+ emails sent, warned 7+ days ago, still no engagement - cancelled",
+          action: "cancelled",
+        });
+      }
+      // If warned within last 7 days, do nothing (give them time to respond)
     }
   }
 }

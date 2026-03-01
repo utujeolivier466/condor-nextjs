@@ -280,8 +280,8 @@ export default function EmailPreviewPage() {
             disabled={loading}
           >
             {loading
-              ? <><div className="spinner" /> Starting trial…</>
-              : <>Start trial & send this every Monday →</>
+              ? <><div className="spinner" /> Starting…</>
+              : <>Get started →</>
             }
           </button>
 

@@ -29,6 +29,7 @@ SELECT
   t.trial_started_at,
   t.emails_sent,
   t.next_email_at,
+  t.last_warning_at,
   CASE
     WHEN s.status = 'active'                                                THEN 'paid'
     WHEN t.trial_started_at IS NULL                                         THEN 'pre_trial'
@@ -42,3 +43,8 @@ SELECT
   END AS days_remaining
 FROM trials t
 LEFT JOIN subscriptions s ON s.company_id = t.company_id;
+
+-- 5. Add last_warning_at column for churn enforcement tracking
+--    Tracks when user was warned about disengagement (3+ emails ignored)
+ALTER TABLE trials
+  ADD COLUMN IF NOT EXISTS last_warning_at TIMESTAMPTZ;

@@ -324,7 +324,7 @@ export default function CandorLanding(): JSX.Element {
         transition: "all 0.3s ease",
       }}>
         <Logo />
-        <a href="/connect-stripe" className="btn-nav">Connect Stripe →</a>
+        <a href="/onboarding" className="btn-nav">Connect Stripe →</a>
       </nav>
 
       {/* ── HERO ── */}
@@ -378,7 +378,7 @@ export default function CandorLanding(): JSX.Element {
         </p>
 
         <div className="fade-up" style={{ animationDelay: "0.5s", display: "flex", flexDirection: "column", gap: 14, alignItems: "flex-start" }}>
-          <a href="/connect-stripe" className="btn-primary">→ Connect Stripe</a>
+          <a href="/onboarding" className="btn-primary">→ Connect Stripe</a>
           <p className="mono" style={{ fontSize: 10, color: T.ash, letterSpacing: "0.2em" }}>
             READ-ONLY. NO SETUP. NO CONFIGURATION.
           </p>
@@ -719,7 +719,7 @@ export default function CandorLanding(): JSX.Element {
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <a href="/connect-stripe" className="btn-primary" style={{ fontSize: 15, padding: "22px 52px" }}>
+            <a href="/onboarding" className="btn-primary" style={{ fontSize: 15, padding: "22px 52px" }}>
               → Connect Stripe
             </a>
             <p className="mono" style={{ fontSize: 10, color: T.ash, letterSpacing: "0.2em" }}>

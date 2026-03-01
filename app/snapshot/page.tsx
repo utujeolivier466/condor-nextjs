@@ -134,7 +134,7 @@ export default function SnapshotPage() {
       <div style={{ minHeight: "100vh", background: T.black, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "40px" }}>
         <Logo />
         <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.red, letterSpacing: "0.15em", textAlign: "center" }}>{error}</p>
-        <button onClick={() => window.location.href = "/connect-stripe"} style={{
+        <button onClick={() => window.location.href = "/onboarding"} style={{
           fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 12,
           letterSpacing: "0.1em", textTransform: "uppercase",
           background: "transparent", color: T.fog, border: `1px solid ${T.ash}`,

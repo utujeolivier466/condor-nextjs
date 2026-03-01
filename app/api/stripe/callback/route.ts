@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 // ─── Stripe OAuth callback ────────────────────────────────────────
 // GET /api/stripe/callback?code=xxx
 // Called by Stripe after the founder authorizes.
-// Exchanges code → stripe_account_id, saves to DB, redirects to /snapshot.
+// Exchanges code → stripe_account_id, saves to DB, redirects to /onboarding.
 
 let stripe: Stripe;
 try {
@@ -28,18 +28,18 @@ export async function GET(req: NextRequest) {
   // ── User denied access ──────────────────────────────────────────
   if (error) {
     return NextResponse.redirect(
-      new URL(`/connect-stripe?error=${encodeURIComponent("Access denied. Connect Stripe to continue.")}`, req.url)
+      new URL(`/onboarding?error=${encodeURIComponent("Access denied. Connect Stripe to continue.")}`, req.url)
     );
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/connect-stripe?error=missing_code", req.url));
+    return NextResponse.redirect(new URL("/onboarding?error=missing_code", req.url));
   }
 
   // ── Check Stripe is configured ─────────────────────────────────
   if (!stripe) {
     return NextResponse.redirect(
-      new URL(`/connect-stripe?error=${encodeURIComponent("Stripe is not configured. Please contact support.")}`, req.url)
+      new URL(`/onboarding?error=${encodeURIComponent("Stripe is not configured. Please contact support.")}`, req.url)
     );
   }
 
@@ -69,16 +69,16 @@ export async function GET(req: NextRequest) {
       // If it's a table not found error, redirect with helpful message
       if (dbError.message.includes("relation") || dbError.message.includes("table")) {
         return NextResponse.redirect(
-          new URL(`/connect-stripe?error=${encodeURIComponent("Database not set up. Please run the schema.sql in Supabase.")}`, req.url)
+          new URL(`/onboarding?error=${encodeURIComponent("Database not set up. Please run the schema.sql in Supabase.")}`, req.url)
         );
       }
       throw new Error("DB error: " + dbError.message);
     }
 
-    // ── Redirect to /setup to collect email ───────────────────────
-    const res = NextResponse.redirect(new URL("/setup", req.url));
+    // ── Redirect to /onboarding for validation (Step 2) ───────────
+    const res = NextResponse.redirect(new URL(`/onboarding?code=${code}`, req.url));
 
-    // Store company_id in cookie so /snapshot can identify the user
+    // Store company_id in cookie so onboarding can validate
     res.cookies.set("candor_company_id", companyId, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error("[Stripe callback error]", err.message);
     return NextResponse.redirect(
-      new URL(`/connect-stripe?error=${encodeURIComponent("Connection failed: " + err.message)}`, req.url)
+      new URL(`/onboarding?error=${encodeURIComponent("Connection failed: " + err.message)}`, req.url)
     );
   }
 }

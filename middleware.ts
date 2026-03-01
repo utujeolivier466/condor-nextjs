@@ -18,9 +18,9 @@ export async function middleware(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;
   const path      = req.nextUrl.pathname;
 
-  // No session → connect Stripe
+  // No session → onboarding
   if (!companyId) {
-    return NextResponse.redirect(new URL("/connect-stripe", req.url));
+    return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
   const state = await getTrialState(companyId);
@@ -59,6 +59,6 @@ export async function middleware(req: NextRequest) {
 
     // Unknown state → boot back to start
     default:
-      return NextResponse.redirect(new URL("/connect-stripe", req.url));
+      return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 }
