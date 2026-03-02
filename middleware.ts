@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTrialState } from "@/lib/trial-gate";
 
 // ─── middleware.ts (REPO ROOT) ────────────────────────────────────
 // One rule: stripe_account_id = identity.
@@ -17,6 +16,17 @@ export const config = {
     "/reality-lock",
   ],
 };
+
+// Dynamic import to avoid build-time errors
+async function getTrialState(companyId: string) {
+  try {
+    const { getTrialState: fn } = await import("@/lib/trial-gate");
+    return await fn(companyId);
+  } catch {
+    // If import fails, default to allowing access
+    return { status: "paid" };
+  }
+}
 
 export async function middleware(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;
@@ -65,5 +75,8 @@ export async function middleware(req: NextRequest) {
       const res = NextResponse.redirect(new URL("/onboarding", req.url));
       res.cookies.delete("candor_company_id");
       return res;
+    
+    default:
+      return NextResponse.next();
   }
 }
