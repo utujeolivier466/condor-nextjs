@@ -41,8 +41,9 @@ export async function computeMetrics(companyId: string): Promise<Metrics> {
   let revenue: RevenueData;
   try {
     revenue = await pullStripeRevenue(conn.stripe_account_id, monthly_burn);
-  } catch (err: any) {
-    throw new Error("Stripe pull failed: " + err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    throw new Error("Stripe pull failed: " + message);
   }
 
   // 3. NRR — Net Revenue Retention
@@ -104,7 +105,7 @@ async function pullStripeRevenue(
   monthlyBurn: number
 ): Promise<RevenueData> {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
+    apiVersion: "2026-02-25.clover",
   });
 
   const now          = Math.floor(Date.now() / 1000);

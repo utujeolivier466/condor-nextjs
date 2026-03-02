@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 // This is not a fee — it's proof.
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
+  apiVersion: "2026-02-25.clover",
 });
 
 export async function POST(req: NextRequest) {
@@ -71,15 +71,17 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, charge_id: charge.id });
 
-  } catch (err: any) {
-    console.error("[verify-charge error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[verify-charge error]", message);
 
     // Surface useful errors
-    const msg = err.code === "account_invalid"
+    const stripeError = err as { code?: string };
+    const msg = stripeError.code === "account_invalid"
       ? "Your Stripe account can't accept charges yet. Complete your Stripe setup first."
-      : err.code === "card_declined"
+      : stripeError.code === "card_declined"
       ? "Verification charge declined. Check your Stripe account is fully set up."
-      : err.message;
+      : message;
 
     return NextResponse.json({ error: msg }, { status: 400 });
   }

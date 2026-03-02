@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-01-28.clover",
+      apiVersion: "2026-02-25.clover",
     });
 
     const now          = Math.floor(Date.now() / 1000);
@@ -107,15 +107,16 @@ export async function GET(req: NextRequest) {
       is_demo:    false,
     });
 
-  } catch (err: any) {
-    console.error("[Snapshot error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[Snapshot error]", message);
     // Return demo data on error instead of failing completely
     return NextResponse.json({
       current_30d: 12500,
       previous_30d: 11200,
       pct_change: 11.6,
       is_demo: true,
-      note: "Using demo data due to error: " + err.message,
+      note: "Using demo data due to error: " + message,
     });
   }
 }

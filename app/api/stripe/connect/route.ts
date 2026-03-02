@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 
 // ─── Stripe OAuth initiation ──────────────────────────────────────
 // POST /api/stripe/connect

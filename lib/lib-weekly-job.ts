@@ -69,8 +69,9 @@ export async function processCompany(companyId: string): Promise<JobResult> {
     let metrics;
     try {
       metrics = await computeMetrics(companyId);
-    } catch (err: any) {
-      return { company_id: companyId, status: "failed", reason: "Compute failed: " + err.message };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return { company_id: companyId, status: "failed", reason: "Compute failed: " + message };
     }
 
     const hasMinData = metrics.nrr !== null || metrics.new_net_arr !== null;
@@ -119,9 +120,10 @@ export async function processCompany(companyId: string): Promise<JobResult> {
     console.log(`[weekly-job] ✓ ${companyId} (${healthScore})`);
     return { company_id: companyId, status: "sent" };
 
-  } catch (err: any) {
-    console.error(`[weekly-job] ✗ ${companyId}:`, err.message);
-    return { company_id: companyId, status: "failed", reason: err.message };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[weekly-job] ✗ ${companyId}:`, message);
+    return { company_id: companyId, status: "failed", reason: message };
   }
 }
 

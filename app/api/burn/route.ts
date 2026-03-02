@@ -51,10 +51,11 @@ export async function POST(req: NextRequest) {
 
     return response;
 
-  } catch (err: any) {
-    console.error("[burn route error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[burn route error]", message);
     return NextResponse.json(
-      { error: "Failed to save: " + err.message },
+      { error: "Failed to save: " + message },
       { status: 500 }
     );
   }

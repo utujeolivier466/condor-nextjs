@@ -44,8 +44,9 @@ export async function sendEmail(to: string, content: EmailContent): Promise<{ ok
 
     return { ok: true, id: data.id };
 
-  } catch (err: any) {
-    console.error("[sendEmail error]", err.message);
-    return { ok: false, error: err.message };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[sendEmail error]", message);
+    return { ok: false, error: message };
   }
 }

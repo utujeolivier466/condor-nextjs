@@ -23,10 +23,11 @@ export async function GET(req: NextRequest) {
       processed: result.length,
       companies: result 
     });
-  } catch (err: any) {
-    console.error("[cron trigger error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[cron trigger error]", message);
     return NextResponse.json(
-      { error: "Failed to run job: " + err.message },
+      { error: "Failed to run job: " + message },
       { status: 500 }
     );
   }

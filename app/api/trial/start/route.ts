@@ -51,10 +51,11 @@ export async function POST(req: NextRequest) {
 
     return response;
 
-  } catch (err: any) {
-    console.error("[trial/start error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[trial/start error]", message);
     // Don't block — still redirect to /home
-    return NextResponse.json({ ok: true, error: err.message });
+    return NextResponse.json({ ok: true, error: message });
   }
 }
 

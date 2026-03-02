@@ -13,7 +13,7 @@ try {
     console.error("[Stripe callback] STRIPE_SECRET_KEY not configured");
   } else {
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-01-28.clover",
+      apiVersion: "2026-02-25.clover",
     });
   }
 } catch (e) {
@@ -89,10 +89,11 @@ export async function GET(req: NextRequest) {
 
     return res;
 
-  } catch (err: any) {
-    console.error("[Stripe callback error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[Stripe callback error]", message);
     return NextResponse.redirect(
-      new URL(`/onboarding?error=${encodeURIComponent("Connection failed: " + err.message)}`, req.url)
+      new URL(`/onboarding?error=${encodeURIComponent("Connection failed: " + message)}`, req.url)
     );
   }
 }

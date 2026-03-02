@@ -47,8 +47,9 @@ export async function GET(req: NextRequest) {
       health_score:    snapshot?.health_score ?? null,
     });
 
-  } catch (err: any) {
-    console.error("[home api error]", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[home api error]", message);
     return NextResponse.json({
       last_email_at:   null,
       last_subject:    null,

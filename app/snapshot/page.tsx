@@ -26,7 +26,6 @@ export default function SnapshotPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [countdown, setCountdown] = useState(7);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -85,10 +84,9 @@ export default function SnapshotPage() {
         if (!res.ok) throw new Error(json.error || "Failed to load snapshot.");
         setData(json);
         setLoading(false);
-        // Trigger animations after data loads
-        setTimeout(() => setVisible(true), 50);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
         setLoading(false);
       }
     }
@@ -268,7 +266,7 @@ export default function SnapshotPage() {
           margin: "0 auto 64px",
         }}>
           This is your Net Revenue retention.<br />
-          We'll explain it later.
+          We&apos;ll explain it later.
         </p>
 
         {/* Continue button + countdown */}
