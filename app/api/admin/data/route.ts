@@ -34,20 +34,6 @@ interface ShapedRow {
   subscription_status: string | null;
 }
 
-interface Stats {
-  total: number;
-  verified: number;
-  trial_active: number;
-  trial_expired: number;
-  paid: number;
-  completion_rate: string;
-  completion_rate_raw: number;
-  verify_rate: string;
-  verify_rate_raw: number;
-  conversion_rate: string;
-  conversion_rate_raw: number;
-}
-
 // ─── GET /api/admin/data ──────────────────────────────────────────
 // Internal only. Password protected.
 // Returns all account data for the admin observatory.

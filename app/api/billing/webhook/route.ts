@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 //                     invoice.payment_failed
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
+  apiVersion: "2026-02-25.clover",
 });
 
 export async function POST(req: NextRequest) {
@@ -32,8 +32,9 @@ export async function POST(req: NextRequest) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
-    console.error("[webhook] Signature verification failed:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[webhook] Signature verification failed:", message);
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
@@ -123,8 +124,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
 
-  } catch (err: any) {
-    console.error("[webhook] Handler error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[webhook] Handler error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

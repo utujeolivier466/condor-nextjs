@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 // The client redirects to Stripe's hosted checkout page.
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
+  apiVersion: "2026-02-25.clover",
 });
 
 export async function POST(req: NextRequest) {
@@ -65,8 +65,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
 
-  } catch (err: any) {
-    console.error("[checkout error]", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[checkout error]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
