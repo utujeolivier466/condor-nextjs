@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
     const { error: dbError } = await supabase
       .from("trials")
       .upsert({
-        company_id:       companyId,
-        started_at:       now.toISOString(),
-        next_email_at:    nextMonday.toISOString(),
-        status:           "active",
-        emails_sent:      0,
+        company_id:        companyId,
+        trial_started_at:  now.toISOString(),
+        next_email_at:     nextMonday.toISOString(),
+        status:            "active",
+        emails_sent:       0,
       }, { onConflict: "company_id" });
 
     if (dbError) throw new Error(dbError.message);

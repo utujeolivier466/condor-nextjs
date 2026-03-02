@@ -6,7 +6,9 @@ import { supabase } from "@/lib/supabase";
 // Creates a Stripe Checkout session and returns the URL.
 // The client redirects to Stripe's hosted checkout page.
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-01-28.clover",
+});
 
 export async function POST(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;

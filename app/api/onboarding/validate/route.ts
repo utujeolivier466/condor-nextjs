@@ -1,21 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { supabase } from "@/lib/supabase";
-
 // ─── POST /api/onboarding/validate ────────────────────────────────
 // Exchanges OAuth code for Stripe account.
 // Validates: live mode, charges enabled, details submitted.
 // Hard stops on test mode — no exceptions.
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20" as any,
-});
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { supabase } from "@/lib/supabase";
+
+// Initialize Stripe only if key exists
+let stripe: Stripe | undefined;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2026-01-28.clover",
+  });
+}
 
 export async function POST(req: NextRequest) {
   const { code } = await req.json();
 
   if (!code) {
     return NextResponse.json({ error: "Missing OAuth code." }, { status: 400 });
+  }
+
+  // Check if Stripe is configured
+  if (!stripe) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Please add STRIPE_SECRET_KEY to environment." },
+      { status: 500 }
+    );
   }
 
   try {

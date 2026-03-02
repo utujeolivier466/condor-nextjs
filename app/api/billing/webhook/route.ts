@@ -12,7 +12,9 @@ import { supabase } from "@/lib/supabase";
 //                     customer.subscription.deleted
 //                     invoice.payment_failed
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-01-28.clover",
+});
 
 export async function POST(req: NextRequest) {
   const body      = await req.text();

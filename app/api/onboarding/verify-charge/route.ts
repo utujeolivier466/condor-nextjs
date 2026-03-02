@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 // This is not a fee — it's proof.
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20" as any,
+  apiVersion: "2026-01-28.clover",
 });
 
 export async function POST(req: NextRequest) {

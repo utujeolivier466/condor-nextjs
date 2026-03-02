@@ -104,7 +104,7 @@ async function pullStripeRevenue(
   monthlyBurn: number
 ): Promise<RevenueData> {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2024-06-20" as any,
+    apiVersion: "2026-01-28.clover",
   });
 
   const now          = Math.floor(Date.now() / 1000);

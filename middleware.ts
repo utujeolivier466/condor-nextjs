@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTrialState } from "./lib/trial-gate";
+import { getTrialState } from "@/lib/trial-gate";
 
 // ─── middleware.ts (REPO ROOT) ────────────────────────────────────
-// Enforces trial gate on every protected request.
-// No grace periods. No exceptions. No bending.
+// One rule: stripe_account_id = identity.
+// No Stripe = no product. No exceptions. No demos.
+//
+// Silent failure: if they dropped off onboarding, nothing chases them.
+// They either finish or they don't. Silence is the filter.
 
 export const config = {
   matcher: [
-    "/home",
     "/snapshot",
-    "/email-preview",
     "/burn-input",
+    "/email-preview",
+    "/home",
+    "/reality-lock",
   ],
 };
 
@@ -18,47 +22,48 @@ export async function middleware(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;
   const path      = req.nextUrl.pathname;
 
-  // No session → onboarding
+  // No stripe_account_id = no access. Full stop.
+  // We do not redirect to onboarding. We do not explain.
+  // If they want in, they know where to go.
   if (!companyId) {
-    return NextResponse.redirect(new URL("/onboarding", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
+  // Demo accounts: kill access. Real Stripe only.
+  // Any demo_ prefix = leftover from old system = boot to onboarding.
+  if (companyId.startsWith("demo_")) {
+    const res = NextResponse.redirect(new URL("/onboarding", req.url));
+    res.cookies.delete("candor_company_id");
+    res.cookies.delete("candor_demo_data");
+    return res;
+  }
+
+  // Check trial state
   const state = await getTrialState(companyId);
 
   switch (state.status) {
-
-    // Demo: full access always
-    case "demo":
-      return NextResponse.next();
-
-    // Paid: full access
     case "paid":
       return NextResponse.next();
 
-    // Active trial: full access
     case "active":
       return NextResponse.next();
 
-    // Pre-trial: free flow (setup, snapshot, burn, email-preview allowed)
-    // They haven't received an email yet — don't gate them out
     case "pre_trial":
+      // They're in the funnel — allow through
       return NextResponse.next();
 
-    // Expired: read-only, redirect to expiry page
     case "expired": {
-      // Allow /home in read-only mode (they can see last email)
       if (path === "/home") {
-        // Attach expired flag so page can show banner
-        const res = NextResponse.next();
-        res.headers.set("x-trial-expired", "true");
-        return res;
+        // Read-only access: pass through, page shows banner
+        return NextResponse.next();
       }
-      // Everything else → expiry wall
       return NextResponse.redirect(new URL("/expired", req.url));
     }
 
-    // Unknown state → boot back to start
-    default:
-      return NextResponse.redirect(new URL("/onboarding", req.url));
+    case "demo":
+      // Demo state = boot to onboarding silently
+      const res = NextResponse.redirect(new URL("/onboarding", req.url));
+      res.cookies.delete("candor_company_id");
+      return res;
   }
 }
