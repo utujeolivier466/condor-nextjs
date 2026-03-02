@@ -1,46 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// ─── middleware.ts (REPO ROOT) ────────────────────────────────────
-// One rule: stripe_account_id = identity.
-// No Stripe = no product. No exceptions. No demos.
-//
-// Silent failure: if they dropped off onboarding, nothing chases them.
-// They either finish or they don't. Silence is the filter.
+// ─── middleware.ts ──────────────────────────────────────────────
+// Simple middleware without external imports to avoid build issues
 
 export const config = {
   matcher: [
     "/snapshot",
-    "/burn-input",
+    "/burn-input", 
     "/email-preview",
     "/home",
     "/reality-lock",
   ],
 };
 
-// Dynamic import to avoid build-time errors
-async function getTrialState(companyId: string) {
-  try {
-    const { getTrialState: fn } = await import("@/lib/trial-gate");
-    return await fn(companyId);
-  } catch {
-    // If import fails, default to allowing access
-    return { status: "paid" };
-  }
-}
-
 export async function middleware(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;
-  const path      = req.nextUrl.pathname;
+  const path = req.nextUrl.pathname;
 
-  // No stripe_account_id = no access. Full stop.
-  // We do not redirect to onboarding. We do not explain.
-  // If they want in, they know where to go.
+  // No companyId = redirect to home
   if (!companyId) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Demo accounts: kill access. Real Stripe only.
-  // Any demo_ prefix = leftover from old system = boot to onboarding.
+  // Demo accounts: redirect to onboarding
   if (companyId.startsWith("demo_")) {
     const res = NextResponse.redirect(new URL("/onboarding", req.url));
     res.cookies.delete("candor_company_id");
@@ -48,35 +30,6 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Check trial state
-  const state = await getTrialState(companyId);
-
-  switch (state.status) {
-    case "paid":
-      return NextResponse.next();
-
-    case "active":
-      return NextResponse.next();
-
-    case "pre_trial":
-      // They're in the funnel — allow through
-      return NextResponse.next();
-
-    case "expired": {
-      if (path === "/home") {
-        // Read-only access: pass through, page shows banner
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/expired", req.url));
-    }
-
-    case "demo":
-      // Demo state = boot to onboarding silently
-      const res = NextResponse.redirect(new URL("/onboarding", req.url));
-      res.cookies.delete("candor_company_id");
-      return res;
-    
-    default:
-      return NextResponse.next();
-  }
+  // Allow access by default - trial checks will happen in page components
+  return NextResponse.next();
 }
