@@ -27,12 +27,25 @@ type Row = {
   subscription_status: string | null;
 };
 
+type Stats = {
+  total: number;
+  verified: number;
+  trial_active: number;
+  trial_expired: number;
+  paid: number;
+  completion_rate: string;
+  completion_rate_raw: number;
+  verify_rate: string;
+  verify_rate_raw: number;
+  conversion_rate: string;
+  conversion_rate_raw: number;
+};
+
 export default function AdminPage() {
   const [rows, setRows]       = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
   const [pass, setPass]       = useState("");
   const [authed, setAuthed]   = useState(false);
-  const [stats, setStats]     = useState<any>(null);
+  const [stats, setStats]     = useState<Stats | null>(null);
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -68,7 +81,6 @@ export default function AdminPage() {
       setRows(data.rows);
       setStats(data.stats);
       setAuthed(true);
-      setLoading(false);
     } else {
       alert("Invalid password");
     }

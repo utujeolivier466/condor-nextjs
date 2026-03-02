@@ -1,6 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// ─── Types ───────────────────────────────────────────────────────
+interface StripeConnectionRow {
+  stripe_account_id: string;
+  country: string | null;
+  default_currency: string | null;
+  connected_at: string | null;
+  verified_at: string | null;
+  trials: Array<{
+    trial_started_at: string | null;
+    emails_sent: number;
+    status: string;
+  }> | null;
+  subscriptions: Array<{
+    status: string | null;
+    plan: string | null;
+    activated_at: string | null;
+  }> | null;
+}
+
+interface ShapedRow {
+  stripe_account_id: string;
+  country: string | null;
+  default_currency: string | null;
+  connected_at: string | null;
+  verified_at: string | null;
+  trial_started_at: string | null;
+  trial_expires_at: string | null;
+  trial_state: "pre_trial" | "active" | "expired" | "paid";
+  emails_sent: number;
+  paid: boolean;
+  subscription_status: string | null;
+}
+
+interface Stats {
+  total: number;
+  verified: number;
+  trial_active: number;
+  trial_expired: number;
+  paid: number;
+  completion_rate: string;
+  completion_rate_raw: number;
+  verify_rate: string;
+  verify_rate_raw: number;
+  conversion_rate: string;
+  conversion_rate_raw: number;
+}
+
 // ─── GET /api/admin/data ──────────────────────────────────────────
 // Internal only. Password protected.
 // Returns all account data for the admin observatory.
@@ -41,21 +88,28 @@ export async function GET(req: NextRequest) {
     if (error) throw error;
 
     // ── Shape the data ────────────────────────────────────────
-    const shaped = (rows || []).map((r: any) => {
+    const shaped: ShapedRow[] = (rows || []).map((r: StripeConnectionRow) => {
       const trial  = r.trials?.[0];
       const sub    = r.subscriptions?.[0];
       const SEVEN  = 7 * 24 * 60 * 60 * 1000;
 
-      const trial_started_at = trial?.trial_started_at ?? null;
-      const trial_expires_at = trial_started_at
-        ? new Date(new Date(trial_started_at).getTime() + SEVEN).toISOString()
+      const trialStartedAt = trial?.trial_started_at ?? null;
+      const trialExpiresAt = trialStartedAt
+        ? new Date(new Date(trialStartedAt).getTime() + SEVEN).toISOString()
         : null;
 
       const now = Date.now();
-      const trial_state =
-        sub?.status === "active" ? "paid" :
-        !trial_started_at        ? "pre_trial" :
-        now < new Date(trial_expires_at!).getTime() ? "active" : "expired";
+      let trialState: ShapedRow["trial_state"] = "pre_trial";
+      
+      if (sub?.status === "active") {
+        trialState = "paid";
+      } else if (!trialStartedAt) {
+        trialState = "pre_trial";
+      } else if (trialExpiresAt && now < new Date(trialExpiresAt).getTime()) {
+        trialState = "active";
+      } else {
+        trialState = "expired";
+      }
 
       return {
         stripe_account_id:   r.stripe_account_id,
@@ -63,9 +117,9 @@ export async function GET(req: NextRequest) {
         default_currency:    r.default_currency,
         connected_at:        r.connected_at,
         verified_at:         r.verified_at,
-        trial_started_at,
-        trial_expires_at,
-        trial_state,
+        trial_started_at:    trialStartedAt,
+        trial_expires_at:    trialExpiresAt,
+        trial_state:         trialState,
         emails_sent:         trial?.emails_sent ?? 0,
         paid:                sub?.status === "active",
         subscription_status: sub?.status ?? null,
@@ -100,8 +154,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ rows: shaped, stats });
 
-  } catch (err: any) {
-    console.error("[admin/data error]", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[admin/data error]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
