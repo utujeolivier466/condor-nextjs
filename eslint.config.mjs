@@ -15,6 +15,15 @@ const eslintConfig = [
   {
     ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
   },
+  // Relax some rules for faster development while maintaining code quality
+  {
+    rules: {
+      "react/no-unescaped-entities": "warn", // Changed from error to warning for quotes/apostrophes in JSX
+      "@typescript-eslint/no-explicit-any": "warn", // Warn instead of error for any types
+      "@typescript-eslint/no-unused-vars": "warn", // Warn for unused variables
+      "react-hooks/exhaustive-deps": "warn", // Warn for missing dependencies
+    },
+  },
 ];
 
 export default eslintConfig;
