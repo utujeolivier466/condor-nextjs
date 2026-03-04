@@ -125,12 +125,12 @@ export default function OnboardingPage() {
       setError("Stripe connection denied. You'll need to connect to continue.");
     } else if (code) {
       // Came back from Stripe OAuth — validate the account
-      handleOAuthCallback(code);
+      handleOAuthCallback();
     }
   }, []);
 
   // ── Handle Stripe OAuth callback ─────────────────────────────
-  const handleOAuthCallback = async (code: string) => {
+  const handleOAuthCallback = async () => {
     setStep("validate");
     setLoading(true);
     setError(null);
@@ -138,7 +138,7 @@ export default function OnboardingPage() {
       const res  = await fetch("/api/onboarding/validate", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ code }),
+        body:    JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -309,28 +309,6 @@ export default function OnboardingPage() {
                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.fog, letterSpacing: "0.1em" }}>{item}</span>
               </div>
             ))}
-          </div>
-
-          {/* No Stripe yet */}
-          <div style={{ background: "rgba(242,238,231,0.03)", border: `1px solid ${T.line}`, padding: "20px 24px", marginBottom: 32 }}>
-            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", color: T.ash, marginBottom: 12 }}>
-              DON'T HAVE STRIPE YET?
-            </p>
-            <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, color: T.fog, lineHeight: 1.6, marginBottom: 16 }}>
-              You'll create one in ~5 minutes. You don't need revenue yet. You do need to be serious.
-            </p>
-            <a
-              href="https://dashboard.stripe.com/register"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontFamily: "'DM Mono', monospace", fontSize: 11,
-                color: T.bone, letterSpacing: "0.15em", textDecoration: "none",
-                borderBottom: `1px solid ${T.ash}`, paddingBottom: 2,
-              }}
-            >
-              CREATE STRIPE ACCOUNT →
-            </a>
           </div>
 
           {error && (

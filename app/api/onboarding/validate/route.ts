@@ -1,7 +1,7 @@
 // ─── POST /api/onboarding/validate ────────────────────────────────
-// Exchanges OAuth code for Stripe account.
-// Validates: live mode, charges enabled, details submitted.
-// Hard stops on test mode — no exceptions.
+// Validates connected Stripe account.
+// Checks: live mode, charges enabled, details submitted.
+// Hard blocks on incomplete account setup — no exceptions.
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -16,10 +16,14 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 export async function POST(req: NextRequest) {
-  const { code } = await req.json();
+  // Get company_id from httpOnly cookie set by /api/stripe/callback
+  const companyId = req.cookies.get("candor_company_id")?.value;
 
-  if (!code) {
-    return NextResponse.json({ error: "Missing OAuth code." }, { status: 400 });
+  if (!companyId) {
+    return NextResponse.json(
+      { error: "Not authenticated. Connect Stripe first." },
+      { status: 401 }
+    );
   }
 
   // Check if Stripe is configured
@@ -31,19 +35,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Exchange code for access token
-    const token = await stripe.oauth.token({
-      grant_type: "authorization_code",
-      code,
-    });
-
-    const stripeAccountId = token.stripe_user_id;
-    if (!stripeAccountId) {
-      return NextResponse.json({ error: "No Stripe account returned." }, { status: 400 });
-    }
-
-    // Retrieve full account details
-    const account = await stripe.accounts.retrieve(stripeAccountId);
+    // Retrieve account details using the company_id (which is the stripe_account_id)
+    const account = await stripe.accounts.retrieve(companyId);
 
     // ── HARD BLOCK: test mode ────────────────────────────────────
     if (!account.charges_enabled && !account.details_submitted) {
@@ -71,8 +64,8 @@ export async function POST(req: NextRequest) {
     const { error: dbError } = await supabase
       .from("stripe_connections")
       .upsert({
-        company_id:        stripeAccountId,
-        stripe_account_id: stripeAccountId,
+        company_id:        companyId,
+        stripe_account_id: companyId,
         connected_at:      new Date().toISOString(),
       }, { onConflict: "company_id" });
 
@@ -88,7 +81,7 @@ export async function POST(req: NextRequest) {
       default_currency: account.default_currency,
     });
 
-    response.cookies.set("candor_company_id", stripeAccountId, {
+    response.cookies.set("candor_company_id", companyId, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
       sameSite: "lax",
