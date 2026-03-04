@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Redirect to /onboarding for validation (Step 2) ───────────
-    const res = NextResponse.redirect(new URL(`/onboarding?code=${code}`, req.url));
+    const res = NextResponse.redirect(new URL(`/onboarding`, req.url));
 
     // Store company_id in cookie so onboarding can validate
     res.cookies.set("candor_company_id", companyId, {

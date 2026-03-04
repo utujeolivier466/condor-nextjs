@@ -115,17 +115,19 @@ export default function OnboardingPage() {
 
     setTimeout(() => setVisible(true), 50);
 
-    // Check if we're returning from Stripe OAuth (has ?code= in URL)
+    // Check if we have an error from Stripe OAuth
     const params = new URLSearchParams(window.location.search);
-    const code   = params.get("code");
     const err    = params.get("error");
 
     if (err) {
       setStep("connect");
       setError("Stripe connection denied. You'll need to connect to continue.");
-    } else if (code) {
-      // Came back from Stripe OAuth — validate the account
-      handleOAuthCallback();
+    } else {
+      // Check if we have a company_id cookie (meaning we just came back from Stripe)
+      const hasCookie = document.cookie.includes("candor_company_id");
+      if (hasCookie) {
+        handleOAuthCallback();
+      }
     }
   }, []);
 
