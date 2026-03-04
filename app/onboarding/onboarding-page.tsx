@@ -123,11 +123,9 @@ export default function OnboardingPage() {
       setStep("connect");
       setError("Stripe connection denied. You'll need to connect to continue.");
     } else {
-      // Check if we have a company_id cookie (meaning we just came back from Stripe)
-      const hasCookie = document.cookie.includes("candor_company_id");
-      if (hasCookie) {
-        handleOAuthCallback();
-      }
+      // Try to validate with the cookie (if it exists)
+      // httpOnly cookies are sent automatically, but we can't read them from JS
+      handleOAuthCallback();
     }
   }, []);
 
@@ -143,6 +141,14 @@ export default function OnboardingPage() {
         body:    JSON.stringify({}),
       });
       const data = await res.json();
+      
+      // 401 = not authenticated (no cookie) — silently stay on connect step
+      if (res.status === 401) {
+        setStep("connect");
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error);
 
       // Hard block: test mode
