@@ -30,7 +30,6 @@ const EMAIL = {
 export default function EmailPreviewPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -118,8 +117,6 @@ export default function EmailPreviewPage() {
       .metric-row:last-child { border-bottom: none; }
     `;
     document.head.appendChild(style);
-
-    setTimeout(() => setVisible(true), 100);
   }, []);
 
   const handleStartTrial = async () => {

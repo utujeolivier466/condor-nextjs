@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const T = {
   black: "#0B0A08",
@@ -23,7 +22,6 @@ type HomeData = {
 };
 
 export default function HomePage() {
-  const router = useRouter();
   const [data, setData]     = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
 

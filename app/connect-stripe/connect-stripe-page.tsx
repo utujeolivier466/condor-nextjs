@@ -55,8 +55,9 @@ export default function ConnectStripePage() {
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
       // Redirect to Stripe OAuth
       window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Connection failed";
+      setError(errorMessage);
       setLoading(false);
     }
   };

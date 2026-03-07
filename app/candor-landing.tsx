@@ -262,7 +262,7 @@ function useInView(threshold: number = 0.12): InViewHookReturn {
     );
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
   return { ref, visible };
 }
 

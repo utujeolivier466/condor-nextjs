@@ -30,9 +30,8 @@ export default function OnboardingPage() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [checked, setChecked]     = useState(false);
-  const [account, setAccount]     = useState<AccountStatus | null>(null);
   const [chargeOk, setChargeOk]   = useState(false);
-  const [visible, setVisible]     = useState(false);
+  const [account, setAccount]     = useState<AccountStatus | null>(null);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -113,8 +112,6 @@ export default function OnboardingPage() {
     `;
     document.head.appendChild(style);
 
-    setTimeout(() => setVisible(true), 50);
-
     // Check if we have an error from Stripe OAuth
     const params = new URLSearchParams(window.location.search);
     const err    = params.get("error");
@@ -170,8 +167,9 @@ export default function OnboardingPage() {
       setAccount(data);
       setLoading(false);
       setStep("reality");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Connection failed";
+      setError(errorMessage);
       setStep("connect");
       setLoading(false);
     }
@@ -186,8 +184,9 @@ export default function OnboardingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Checkout failed";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -204,8 +203,9 @@ export default function OnboardingPage() {
       setLoading(false);
       // Brief pause so they see the success, then advance
       setTimeout(() => setStep("done"), 1200);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Charge verification failed";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -216,7 +216,6 @@ export default function OnboardingPage() {
   };
 
   const steps: Step[] = ["prefilter", "connect", "validate", "reality", "charge", "done"];
-  const stepIndex = steps.indexOf(step);
 
   return (
     <div style={{

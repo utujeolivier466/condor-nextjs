@@ -3,7 +3,7 @@ import { computeMetrics } from "./lib-compute";
 import { generateJudgment, computeHealthScore } from "./lib-judgment";
 import { buildEmail } from "./lib-email-template";
 import { sendEmail } from "./lib-send-email";
-import { canReceiveEmail, startTrial } from "./trial-gate";
+import { canReceiveEmail, startTrial, getTrialState } from "./trial-gate";
 
 // ─── lib/weekly-job.ts (updated with trial logic) ─────────────────
 // Trial starts on FIRST email send. Expires 7 days later. No exceptions.
@@ -70,8 +70,8 @@ export async function processCompany(companyId: string): Promise<JobResult> {
     try {
       metrics = await computeMetrics(companyId);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      return { company_id: companyId, status: "failed", reason: "Compute failed: " + message };
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      return { company_id: companyId, status: "failed", reason: "Compute failed: " + errorMessage };
     }
 
     const hasMinData = metrics.nrr !== null || metrics.new_net_arr !== null;
@@ -82,8 +82,9 @@ export async function processCompany(companyId: string): Promise<JobResult> {
     // ── Generate judgment ────────────────────────────────────────
     const judgment    = generateJudgment(metrics);
     const healthScore = computeHealthScore(metrics);
-    const content     = buildEmail(metrics, judgment, healthScore, new Date());
-
+    const trialState  = await getTrialState(companyId);
+    const trialStatus = trialState.status === "paid" ? "paid" : "trial";
+    const content     = buildEmail(metrics, judgment, healthScore, new Date(), trialStatus);
     // ── Send ─────────────────────────────────────────────────────
     const result = await sendEmail(email, content);
     if (!result.ok) {
@@ -99,7 +100,8 @@ export async function processCompany(companyId: string): Promise<JobResult> {
         company_id:      companyId,
         sent_at:         new Date().toISOString(),
         subject:         content.subject,
-        constraint_text: judgment,
+        constraint_text: judgment.interpretation,
+        action_text:     judgment.action,
         health_score:    healthScore,
       }),
       supabase.from("snapshots").insert({
@@ -121,9 +123,9 @@ export async function processCompany(companyId: string): Promise<JobResult> {
     return { company_id: companyId, status: "sent" };
 
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[weekly-job] ✗ ${companyId}:`, message);
-    return { company_id: companyId, status: "failed", reason: message };
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[weekly-job] ✗ ${companyId}:`, errorMessage);
+    return { company_id: companyId, status: "failed", reason: errorMessage };
   }
 }
 

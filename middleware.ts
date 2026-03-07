@@ -15,7 +15,6 @@ export const config = {
 
 export async function middleware(req: NextRequest) {
   const companyId = req.cookies.get("candor_company_id")?.value;
-  const path = req.nextUrl.pathname;
 
   // No companyId = redirect to home
   if (!companyId) {

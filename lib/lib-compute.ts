@@ -1,32 +1,31 @@
 import Stripe from "stripe";
 import { supabase } from "./supabase";
+import { buildMRRSnapshot, compareMRRSnapshots } from "./lib-mrr-snapshot";
+import { detectCoreAction } from "./lib-core-action-detector";
+import { computeForwardSignal } from "./lib-forward-signal";
 
-// ─── lib/compute.ts ───────────────────────────────────────────────
-// Pulls real Stripe data. Computes the 5 numbers.
-// Ugly but directionally correct. That's the spec.
+// ─── lib/compute.ts v2 ───────────────────────────────────────────
+// Full metric engine.
+// NRR:             subscription MRR snapshots (not raw charges)
+// Core Action:     auto-detected from Stripe events
+// Forward Signal:  4-input scored algorithm
 
 export type Metrics = {
-  nrr:                number | null;  // %
-  new_net_arr:        number | null;  // $ last 30d
-  burn_multiple:      number | null;  // x
-  core_action_conv:   number | null;  // % (mocked V1)
-  forward_signal:     "STRONG" | "STABLE" | "AT_RISK" | null;
-  insufficient:       string[];       // metrics we couldn't compute
+  nrr:              number | null;
+  new_net_arr:      number | null;
+  burn_multiple:    number | null;
+  core_action_conv: number | null;
+  core_action_name: string | null;   // e.g. "invoice.paid"
+  forward_signal:   "STRONG" | "STABLE" | "AT_RISK" | null;
+  forward_score:    number;           // raw score for transparency
+  business_model:   "subscription" | "transactional";
+  insufficient:     string[];
 };
 
-export type RevenueData = {
-  current_30d:   number;
-  previous_30d:  number;
-  new_revenue:   number;  // new customers revenue
-  churned:       number;  // lost revenue
-  monthly_burn:  number;
-};
-
-// ─── Main: compute all metrics for a company ─────────────────────
 export async function computeMetrics(companyId: string): Promise<Metrics> {
   const insufficient: string[] = [];
 
-  // 1. Load connection from DB
+  // ── Load connection ───────────────────────────────────────────
   const { data: conn } = await supabase
     .from("stripe_connections")
     .select("stripe_account_id, monthly_burn")
@@ -35,58 +34,88 @@ export async function computeMetrics(companyId: string): Promise<Metrics> {
 
   if (!conn) throw new Error("Company not found: " + companyId);
 
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-02-25.clover",
+  });
+
   const monthly_burn = conn.monthly_burn ?? 0;
 
-  // 2. Pull Stripe revenue
-  let revenue: RevenueData;
-  try {
-    revenue = await pullStripeRevenue(conn.stripe_account_id, monthly_burn);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    throw new Error("Stripe pull failed: " + message);
-  }
+  // ── Build MRR snapshots (30 days apart) ───────────────────────
+  const now         = new Date();
+  const thirtyAgo   = new Date(now.getTime()      - 30 * 24 * 60 * 60 * 1000);
+  const sixtyAgo    = new Date(now.getTime()      - 60 * 24 * 60 * 60 * 1000);
 
-  // 3. NRR — Net Revenue Retention
-  // NRR = (previous MRR + expansion - contraction - churn) / previous MRR * 100
+  const [snapshotStart, snapshotEnd] = await Promise.all([
+    buildMRRSnapshot(stripe, conn.stripe_account_id, sixtyAgo),
+    buildMRRSnapshot(stripe, conn.stripe_account_id, thirtyAgo),
+  ]);
+
+  const movement = compareMRRSnapshots(snapshotStart, snapshotEnd);
+
+  // ── 1. NRR ────────────────────────────────────────────────────
   let nrr: number | null = null;
-  if (revenue.previous_30d > 0) {
-    const retained = revenue.current_30d - revenue.new_revenue;
-    nrr = Math.round((retained / revenue.previous_30d) * 100 * 10) / 10;
+  if (movement.starting_mrr > 0) {
+    const retained = movement.starting_mrr + movement.expansion - movement.contraction - movement.churn;
+    nrr = Math.round((retained / movement.starting_mrr) * 100 * 10) / 10;
   } else {
     insufficient.push("NRR");
   }
 
-  // 4. New Net ARR — (current - previous) annualized
-  let new_net_arr: number | null = null;
-  if (revenue.current_30d !== null && revenue.previous_30d !== null) {
-    new_net_arr = Math.round((revenue.current_30d - revenue.previous_30d) * 12);
-  } else {
-    insufficient.push("New Net ARR");
-  }
+  // ── 2. New Net ARR ────────────────────────────────────────────
+  // MRR change × 12, excluding new customers (pure growth of existing base)
+  const mrr_change  = movement.ending_mrr - movement.starting_mrr - movement.new_mrr;
+  const new_net_arr = Math.round(mrr_change * 12);
 
-  // 5. Burn Multiple — burn / new net ARR
+  // ── 3. Burn Multiple ──────────────────────────────────────────
   let burn_multiple: number | null = null;
-  if (monthly_burn > 0 && new_net_arr && new_net_arr > 0) {
-    burn_multiple = Math.round((monthly_burn / (new_net_arr / 12)) * 10) / 10;
+  if (monthly_burn > 0 && movement.new_mrr > 0) {
+    burn_multiple = Math.round((monthly_burn / movement.new_mrr) * 10) / 10;
   } else if (monthly_burn === 0) {
-    insufficient.push("Burn Multiple"); // no burn input
-  } else {
-    burn_multiple = null; // negative new ARR — still show as null
+    insufficient.push("Burn Multiple");
   }
 
-  // 6. Core Action Conversion — MOCKED V1
-  // Real implementation requires product event tracking (coming in V2)
-  const core_action_conv: number | null = null;
-  insufficient.push("Core Action Conversion"); // honest: no data yet
+  // ── 4. Core Action (auto-detected) ────────────────────────────
+  const coreActionResult = await detectCoreAction(stripe, conn.stripe_account_id);
 
-  // 7. Forward Signal — derived from NRR trend + new ARR direction
-  let forward_signal: Metrics["forward_signal"] = null;
-  if (nrr !== null && new_net_arr !== null) {
-    if (nrr >= 110 && new_net_arr > 0)        forward_signal = "STRONG";
-    else if (nrr >= 100 && new_net_arr >= 0)  forward_signal = "STABLE";
-    else                                       forward_signal = "AT_RISK";
-  } else {
+  let core_action_conv: number | null = null;
+  let core_action_name: string | null = null;
+
+  if (coreActionResult.confidence !== "insufficient") {
+    core_action_conv = coreActionResult.conversion_rate;
+    core_action_name = coreActionResult.action;
+  }
+
+  if (core_action_conv === null) {
+    insufficient.push("Core Action Conversion");
+  }
+
+  // ── 5. Forward Signal (scored) ────────────────────────────────
+  const signalResult = computeForwardSignal({
+    nrr,
+    new_net_arr,
+    burn_multiple,
+    core_action_conv,
+    core_action_name,
+    forward_signal: null,
+    forward_score: 0,
+    business_model: coreActionResult.business_model,
+    insufficient,
+  });
+
+  if (signalResult.signal === null) {
     insufficient.push("Forward Signal");
+  }
+
+  // ── Cache core action result to DB (avoids re-detection weekly) ─
+  if (coreActionResult.confidence === "confirmed") {
+    await supabase
+      .from("stripe_connections")
+      .update({
+        detected_core_action:  coreActionResult.action,
+        business_model:        coreActionResult.business_model,
+        core_action_updated_at: new Date().toISOString(),
+      })
+      .eq("company_id", companyId);
   }
 
   return {
@@ -94,80 +123,10 @@ export async function computeMetrics(companyId: string): Promise<Metrics> {
     new_net_arr,
     burn_multiple,
     core_action_conv,
-    forward_signal,
+    core_action_name,
+    forward_signal:  signalResult.signal,
+    forward_score:   signalResult.score,
+    business_model:  coreActionResult.business_model,
     insufficient,
   };
-}
-
-// ─── Pull Stripe revenue for 30d + previous 30d ──────────────────
-async function pullStripeRevenue(
-  stripeAccountId: string,
-  monthlyBurn: number
-): Promise<RevenueData> {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-02-25.clover",
-  });
-
-  const now          = Math.floor(Date.now() / 1000);
-  const day30        = 60 * 60 * 24 * 30;
-  const curr_start   = now - day30;
-  const prev_start   = now - day30 * 2;
-
-  const [currCharges, prevCharges] = await Promise.all([
-    fetchAllCharges(stripe, stripeAccountId, curr_start, now),
-    fetchAllCharges(stripe, stripeAccountId, prev_start, curr_start),
-  ]);
-
-  const current_30d  = sumCharges(currCharges);
-  const previous_30d = sumCharges(prevCharges);
-
-  // Identify new vs returning customers
-  const prevCustomers = new Set(prevCharges.filter(c => c.status === "succeeded").map(c => c.customer));
-  const newRevenue    = currCharges
-    .filter(c => c.status === "succeeded" && !c.refunded && !prevCustomers.has(c.customer))
-    .reduce((s, c) => s + c.amount, 0) / 100;
-
-  // Churned = customers who paid last period but not this period
-  const currCustomers = new Set(currCharges.filter(c => c.status === "succeeded").map(c => c.customer));
-  const churnedRevenue = prevCharges
-    .filter(c => c.status === "succeeded" && !c.refunded && !currCustomers.has(c.customer))
-    .reduce((s, c) => s + c.amount, 0) / 100;
-
-  return {
-    current_30d,
-    previous_30d,
-    new_revenue:  newRevenue,
-    churned:      churnedRevenue,
-    monthly_burn: monthlyBurn,
-  };
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────
-async function fetchAllCharges(
-  stripe: Stripe,
-  stripeAccountId: string,
-  from: number,
-  to: number
-): Promise<Stripe.Charge[]> {
-  const all: Stripe.Charge[] = [];
-  let hasMore = true;
-  let startingAfter: string | undefined;
-
-  while (hasMore) {
-    const batch = await stripe.charges.list(
-      { created: { gte: from, lte: to }, limit: 100,
-        ...(startingAfter ? { starting_after: startingAfter } : {}) },
-      { stripeAccount: stripeAccountId }
-    );
-    all.push(...batch.data);
-    hasMore = batch.has_more;
-    startingAfter = batch.data[batch.data.length - 1]?.id;
-  }
-  return all;
-}
-
-function sumCharges(charges: Stripe.Charge[]): number {
-  return charges
-    .filter(c => c.status === "succeeded" && !c.refunded)
-    .reduce((s, c) => s + c.amount, 0) / 100;
 }

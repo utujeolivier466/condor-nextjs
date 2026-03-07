@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const T = {
   black: "#0B0A08",
@@ -14,7 +13,6 @@ const T = {
 };
 
 export default function PricingPage() {
-  const router = useRouter();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +63,7 @@ export default function PricingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       window.location.href = data.url; // Stripe Checkout
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setLoading(false);
     }

@@ -13,11 +13,23 @@ const T = {
   line:  "rgba(242,238,231,0.1)",
 };
 
+type Step = "prefilter" | "connect" | "validate" | "reality" | "charge" | "done";
+
+type AccountStatus = {
+  charges_enabled: boolean;
+  details_submitted: boolean;
+  country: string;
+  default_currency: string;
+  livemode: boolean;
+};
+
 export default function BurnInputPage() {
   const router = useRouter();
   const [burn, setBurn]       = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [step, setStep]       = useState<Step>("prefilter");
+  const [account, setAccount] = useState<AccountStatus | null>(null);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -81,8 +93,9 @@ export default function BurnInputPage() {
       if (!res.ok) throw new Error(json.error || "Failed to save.");
       // Redirect to email preview after saving
       router.push("/email-preview");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save.";
+      setError(errorMessage);
       setLoading(false);
     }
   };
